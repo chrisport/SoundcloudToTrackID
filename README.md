@@ -14,5 +14,6 @@ https://soundcloud.com/pacayapacaya/lazy-acid#t=58:30                          -
 ## TODO
 - implement jumping to timestamp
 - implement web interface
+- implement caching with timestamp-range
 - automate deployment (terraform)
 - port webserver into python
