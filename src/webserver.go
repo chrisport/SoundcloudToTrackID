@@ -7,10 +7,73 @@ import (
 	"strings"
 	"sync"
 	"encoding/json"
+	"regexp"
+	"strconv"
+	"math"
+)
+
+var (
+	hourRegex = regexp.MustCompile("([0-9]+)h")
+	minuteRegex = regexp.MustCompile("([0-9]+)m")
+	secondRegex = regexp.MustCompile("([0-9]+)s")
 )
 
 func main() {
 	Serve()
+}
+
+func extractTimeInSeconds(timestamp string) (int, error) {
+	if timestamp == "" {
+		return 0, nil
+	} else if strings.Contains(timestamp, "s") {
+		return extractFromHMSFormat(timestamp)
+	} else {
+		return extractFromCOLONFormat(timestamp)
+	}
+}
+
+func extractFromCOLONFormat(timestamp string) (int, error) {
+	p := strings.Split(timestamp, ":")
+	factor := int(math.Pow(float64(60), float64(len(p) - 1)))
+	total := 0
+	for i := 0; i < len(p); i++ {
+		c, err := strconv.Atoi(p[i])
+		if err != nil {
+			return 0, err
+		}
+		total += c * factor
+		factor = factor / 60
+	}
+	return total, nil
+}
+
+func extractFromHMSFormat(timestamp string) (int, error) {
+	t := 0
+	match := hourRegex.FindStringSubmatch(timestamp)
+	if len(match) > 0 {
+		hrs, err := strconv.Atoi(match[1])
+		if err != nil {
+			return 0, err
+		}
+		t += hrs * 1200
+	}
+	match = minuteRegex.FindStringSubmatch(timestamp)
+	if len(match) > 0 {
+		min, err := strconv.Atoi(match[1])
+		if err != nil {
+			return 0, err
+		}
+		t += min * 60
+	}
+	match = secondRegex.FindStringSubmatch(timestamp)
+	if len(match) > 0 {
+		sec, err := strconv.Atoi(match[1])
+		if err != nil {
+			return 0, err
+		}
+		t += sec
+	}
+	return t, nil
 }
 
 func Serve() {
@@ -20,9 +83,10 @@ func Serve() {
 	http.HandleFunc("/recognise", func(rw http.ResponseWriter, req *http.Request) {
 		q := req.URL.Query()
 		songUrl := q["url"][0]
-		timestamp := q["t"][0]
-		if timestamp == ""{
-			timestamp = "0"
+		ts := q["t"][0]
+		timeInSeconds, err := extractTimeInSeconds(ts)
+		if err != nil {
+			rw.Write([]byte(res))
 		}
 		if lastRequestedUrl == songUrl {
 			log.Println("User requested same url " + songUrl)
@@ -39,7 +103,7 @@ func Serve() {
 				rateLimiter.Lock()
 				lastRequestedUrl = songUrl
 				lastResult = ""
-				res = RecogniseSong(songUrl,timestamp)
+				res = RecogniseSong(songUrl, timeInSeconds)
 				var asd interface{}
 				err := json.Unmarshal([]byte(res), &asd)
 				if err != nil {
@@ -56,12 +120,12 @@ func Serve() {
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
 
-func RecogniseSong(songUrl string, timestamp string) string {
-	out, err := exec.Command("./run.sh", songUrl,timestamp).Output()
+func RecogniseSong(songUrl string, timeInSeconds int) string {
+	out, err := exec.Command("./run.sh", songUrl, strconv.Itoa(timeInSeconds)).Output()
 	if err != nil {
 		log.Printf("[ERROR] %v", err)
 	}
-	log.Println(songUrl,string(out))
+	log.Println(songUrl, string(out))
 	lines := strings.Split(string(out), "\n")
 	res := "unknown error occurred"
 	for i := len(lines) - 1; i >= 0; i-- {
