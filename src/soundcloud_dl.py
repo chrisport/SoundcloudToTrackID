@@ -3,12 +3,13 @@ import soundcloud
 import os
 import sys
 import requests
+from pydub import AudioSegment
 from mutagen.mp3 import MP3, EasyMP3
 from mutagen.id3 import ID3 as OldID3
 from mutagen.id3 import APIC
 from clint.textui import progress
 
-CLIENT_ID = "****" #your client ID
+CLIENT_ID = "**" #your client ID
 FOLDER_LOCATION = "." #where you want the file saved to
 client = soundcloud.Client(client_id=CLIENT_ID)
 SONG_TO_DOWNLOAD = ""
@@ -127,7 +128,7 @@ def getFileSize():
 
 
 # creates save destination if that directory doesn't exist. Proceeds to download the audio file(s)
-def downloadSongs(songs):
+def downloadSongs(songs, timestamp):
     global SONG_TO_DOWNLOAD
     i = 1
     if not os.path.exists(FOLDER_LOCATION):
@@ -146,35 +147,36 @@ def downloadSongs(songs):
                 r = requests.get(STREAM_URL, stream=True)
                 with open(path, 'wb') as f:
                     fileSize = int(r.headers.get('content-length'))
-                    chunk_count=0
-                    # for chunk in progress.bar(r.iter_content(chunk_size=1024), expected_size=(fileSize/1024)+1):
-                    for chunk in progress.bar(r.iter_content(chunk_size=1024), expected_size=500):
+                    for chunk in progress.bar(r.iter_content(chunk_size=1024), expected_size=(fileSize/1024)+1):
                         if chunk:
-                            chunk_count=chunk_count+1
                             f.write(chunk)
                             f.flush()
-                        if chunk_count>500:
-                            break
                 addTags(path)
                 i+=1
             except:
                 print("Download failed.")
                 print(FAILED_MESSAGE)
                 i+=1
+    full_song = AudioSegment.from_mp3(path)
+    snippet = full_song[int(timestamp)*1000:int(timestamp)*1000+20*1000]
+    snippet.export(os.path.join(FOLDER_LOCATION, getTrack().title +"_t"+str(timestamp)+".mp3"), format="mp3")
     print("Download complete!")
     print("\n"+getTrack().title+".mp3")
 
 
 if __name__ == "__main__":
-    if (len(sys.argv) == 2):  # a link was provided
+    if len(sys.argv) == 2 or len(sys.argv) == 3:  # a link was provided
+        if len(sys.argv) == 3:  # a link was provided
+            TIMESTAMP = sys.argv[2]
+        else:
+            TIMESTAMP = 0
+
         SONG_TO_DOWNLOAD = sys.argv[1]
         if isValid(SONG_TO_DOWNLOAD):
             if isPlayList(SONG_TO_DOWNLOAD):
-                getSongURLFromSet(SONG_TO_DOWNLOAD)
-                downloadSongs(URLS_TO_DOWNLOAD)
-                exit(0)
-            # printInfo() #optional
+                # no support for playlists
+                exit(1)
             URLS_TO_DOWNLOAD.append(SONG_TO_DOWNLOAD)
-            downloadSongs(URLS_TO_DOWNLOAD)
+            downloadSongs(URLS_TO_DOWNLOAD,TIMESTAMP)
     else:
         print(HELP_MESSAGE)

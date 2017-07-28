@@ -2,8 +2,8 @@
 #
 # Example
 # ./run https://soundcloud.com/elbuhoofficial/tecolotin
-#
-op=$(python3 soundcloud_dl.py $1)
+#python3 soundcloud_dl.py
+op=$(python3 soundcloud_dl.py $1 $2)
 filename=${op##*$'\n'}
 echo $filename
 python3 test.py "$filename"

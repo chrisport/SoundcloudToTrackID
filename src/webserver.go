@@ -20,6 +20,10 @@ func Serve() {
 	http.HandleFunc("/recognise", func(rw http.ResponseWriter, req *http.Request) {
 		q := req.URL.Query()
 		songUrl := q["url"][0]
+		timestamp := q["t"][0]
+		if timestamp == ""{
+			timestamp = "0"
+		}
 		if lastRequestedUrl == songUrl {
 			log.Println("User requested same url " + songUrl)
 			if (lastResult != "") {
@@ -35,7 +39,7 @@ func Serve() {
 				rateLimiter.Lock()
 				lastRequestedUrl = songUrl
 				lastResult = ""
-				res = RecogniseSong(songUrl)
+				res = RecogniseSong(songUrl,timestamp)
 				var asd interface{}
 				err := json.Unmarshal([]byte(res), &asd)
 				if err != nil {
@@ -52,8 +56,8 @@ func Serve() {
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
 
-func RecogniseSong(songUrl string) string {
-	out, err := exec.Command("./run.sh", songUrl).Output()
+func RecogniseSong(songUrl string, timestamp string) string {
+	out, err := exec.Command("./run.sh", songUrl,timestamp).Output()
 	if err != nil {
 		log.Printf("[ERROR] %v", err)
 	}
