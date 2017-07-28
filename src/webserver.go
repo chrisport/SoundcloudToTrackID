@@ -6,13 +6,15 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"encoding/json"
 	"regexp"
 	"strconv"
 	"math"
+	"html/template"
+	simplejson "github.com/bitly/go-simplejson"
 )
 
 var (
+	inProgressMessage = "<html><head><meta http-equiv=\"refresh\" content=\"2;\"></head><body>recognition in progress... you will be redirected automatically</body></html>"
 	hourRegex = regexp.MustCompile("([0-9]+)h")
 	minuteRegex = regexp.MustCompile("([0-9]+)m")
 	secondRegex = regexp.MustCompile("([0-9]+)s")
@@ -77,47 +79,101 @@ func extractFromHMSFormat(timestamp string) (int, error) {
 }
 
 func Serve() {
-	rateLimiter := sync.RWMutex{}
-	var res, lastResult, lastRequestedUrl string
-	lastResult = "-"
-	http.HandleFunc("/recognise", func(rw http.ResponseWriter, req *http.Request) {
+	fs := http.FileServer(http.Dir("frontend"))
+	http.Handle("/", fs)
+	throttledRecogniser := newThrottledRecogniser()
+	http.HandleFunc("/api/recognise", func(rw http.ResponseWriter, req *http.Request) {
 		q := req.URL.Query()
 		songUrl := q["url"][0]
 		ts := q["t"][0]
-		timeInSeconds, err := extractTimeInSeconds(ts)
+		result := throttledRecogniser(songUrl, ts)
+
+		if result.RawBody != "" {
+			rw.Write([]byte(result.RawBody))
+			return
+		}
+
+		t := template.New("some template") // Create a template.
+		//t2, err := t.ParseFiles("./frontend/result_page.html")  // Parse template file.
+		t2, err := t.Parse("{{.ErrorMessage}}{{.Artist}} {{.TrackName}}")  // Parse template file.
 		if err != nil {
-			rw.Write([]byte(res))
-		}
-		if lastRequestedUrl == songUrl+ts {
-			log.Println("User requested same url " + songUrl+ts)
-			if (lastResult != "") {
-				res = lastResult
-			} else {
-				res = "recognition in progress... please refresh"
-			}
-		} else {
-			log.Println("User requested new URL, start recognition " + songUrl+ts)
-			if lastResult == "" {
-				res = "Rate limit reached."
-			} else {
-				rateLimiter.Lock()
-				lastRequestedUrl = songUrl+ts
-				lastResult = ""
-				res = RecogniseSong(songUrl, timeInSeconds)
-				var asd interface{}
-				err := json.Unmarshal([]byte(res), &asd)
-				if err != nil {
-					res = "Error occurred"
-				}
-				lastResult = res
-				rateLimiter.Unlock()
-			}
-
+			panic(err)
 		}
 
-		rw.Write([]byte(res))
+		t2.Execute(rw, *result)
 	})
 	log.Fatal(http.ListenAndServe(":3000", nil))
+}
+
+type Response struct {
+	ErrorMessage string
+	Artist       string
+	TrackName    string
+	RawBody      string
+}
+
+func newThrottledRecogniser() func(songUrl string, ts string) *Response {
+	rateLimiter := sync.RWMutex{}
+	var lastRequestedUrl string
+	var lastResult = &Response{}
+	return func(songUrl, ts string) *Response {
+		timeInSeconds, err := extractTimeInSeconds(ts)
+		if err != nil {
+			return &Response{ErrorMessage:err.Error()}
+
+		}
+		if lastRequestedUrl == songUrl + ts {
+			log.Println("User requested same url " + songUrl + ts)
+			if (lastResult != nil) {
+				return lastResult
+			} else {
+				return &Response{RawBody:inProgressMessage}
+			}
+		} else {
+			log.Println("User requested new URL, start recognition " + songUrl + ts)
+			if lastResult == nil {
+				return &Response{ErrorMessage:"Rate limit reached."}
+			} else {
+				rateLimiter.Lock()
+				go func() {
+					lastRequestedUrl = songUrl + ts
+					lastResult = nil
+					result := RecogniseSong(songUrl, timeInSeconds)
+					res := parseResult(result)
+					lastResult = res
+					rateLimiter.Unlock()
+				}()
+				return &Response{RawBody:inProgressMessage}
+			}
+
+		}
+	}
+
+}
+
+func parseResult(result string) *Response {
+	sj, err := simplejson.NewJson([]byte(result))
+	if err != nil {
+		return &Response{ErrorMessage:"Error occurred"}
+	}
+
+	noResult, err := (*sj).GetPath("status", "msg").String()
+	if noResult == "No result" {
+		return &Response{ErrorMessage:"Track could not be recognised."}
+	}
+
+	artist, err := (*sj).GetPath("metadata", "music").GetIndex(0).Get("artists").GetIndex(0).Get("name").String()
+	if err != nil {
+		return &Response{ErrorMessage:"Error occurred"}
+	}
+
+	trackName, err := (*sj).GetPath("metadata", "music").GetIndex(0).Get("title").String()
+	if err != nil {
+		return &Response{ErrorMessage:"Error occurred"}
+	} else {
+
+		return &Response{Artist:artist, TrackName:trackName}
+	}
 }
 
 func RecogniseSong(songUrl string, timeInSeconds int) string {
