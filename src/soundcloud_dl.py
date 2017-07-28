@@ -157,9 +157,6 @@ def downloadSongs(songs, timestamp):
                 print("Download failed.")
                 print(FAILED_MESSAGE)
                 i+=1
-    full_song = AudioSegment.from_mp3(path)
-    snippet = full_song[int(timestamp)*1000:int(timestamp)*1000+20*1000]
-    snippet.export(os.path.join(FOLDER_LOCATION, getTrack().title +"_t"+str(timestamp)+".mp3"), format="mp3")
     print("Download complete!")
     print("\n"+getTrack().title+".mp3")
 

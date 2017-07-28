@@ -88,20 +88,20 @@ func Serve() {
 		if err != nil {
 			rw.Write([]byte(res))
 		}
-		if lastRequestedUrl == songUrl {
-			log.Println("User requested same url " + songUrl)
+		if lastRequestedUrl == songUrl+ts {
+			log.Println("User requested same url " + songUrl+ts)
 			if (lastResult != "") {
 				res = lastResult
 			} else {
 				res = "recognition in progress... please refresh"
 			}
 		} else {
-			log.Println("User requested new URL, start recognition " + songUrl)
+			log.Println("User requested new URL, start recognition " + songUrl+ts)
 			if lastResult == "" {
 				res = "Rate limit reached."
 			} else {
 				rateLimiter.Lock()
-				lastRequestedUrl = songUrl
+				lastRequestedUrl = songUrl+ts
 				lastResult = ""
 				res = RecogniseSong(songUrl, timeInSeconds)
 				var asd interface{}
