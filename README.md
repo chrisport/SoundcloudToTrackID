@@ -10,3 +10,9 @@ https://soundcloud.com/spak/melodias-de-los-bosques#t=25:51 --> Lemurian - 222
 https://soundcloud.com/cosmotechmusic/cosmopods12-by-jati-div#t=38:00          -->?¿?
 https://soundcloud.com/festivalnomade/peter-power-post-colonial-cafe#t=1:10:10 -->?¿?
 https://soundcloud.com/pacayapacaya/lazy-acid#t=58:30                          -->?¿?
+
+## TODO
+- implement jumping to timestamp
+- implement web interface
+- automate deployment (terraform)
+- port webserver into python
