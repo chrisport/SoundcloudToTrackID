@@ -5,6 +5,7 @@ import (
 	"log"
 	"os/exec"
 	"fmt"
+	"strings"
 )
 
 func main() {
@@ -20,7 +21,16 @@ func Serve() {
 		if err != nil {
 			fmt.Errorf("%v",err)
 		}
-		rw.Write(out)
+		log.Println(string(out))
+		json := strings.Split(string(out),"\n")
+		res := "unknown error occurred"
+		for i:=len(json)-1;i>=0;i--{
+			if json[i]!=""{
+				res = json[i]
+				break;
+			}
+		}
+		rw.Write([]byte(res))
 	})
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }

@@ -5,7 +5,6 @@
 #
 op=$(python3 soundcloud_dl.py $1)
 filename=${op##*$'\n'}
-op=$(python3 test.py $filename)
-json=${op##*$'\n'}
-echo ${json}
-rm $filename
+echo $filename
+python3 test.py "$filename"
+rm "$filename"
