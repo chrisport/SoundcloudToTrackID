@@ -10,21 +10,24 @@
         top: 50%;
         width: 30em;
         margin-left: -15em; /*half width*/
-        margin-top: -200px; /*half height*/
+        margin-top: -250px; /*half height*/
     }
 </style>
 <body>
 <div class="center">
-    <form method="GET" action="/api/recognise" class="form-group" style="width: 30em">
+    <h2>SoundSniffer</h2>
+    Shazam for SoundCloud.
+    <form style="margin-top: 2em;margin-bottom: 2em;" method="GET" action="/api/recognise" class="form-group"
+          style="width: 30em">
         <label for="url">SoundCloud URL</label>
-        <input type="text" class="form-control" id="url" name="url"
-               placeholder="https://soundcloud.com/elbuhoofficial/tecolotin">
+        <input type="text" style="margin-bottom:10px;"class="form-control" id="url" name="url"
+               placeholder="https://soundcloud.com/elbuhoofficial/tecolotin#t=0:15">
         <label for="t">Time</label>
-        <input type="text" style="width: 5em" class="form-control" id="t" name="t" value="0s" placeholder="0m0s">
+        <input type="text" style="width: 5em;margin-bottom:10px;" class="form-control" id="t" name="t" value="0s"
+               placeholder="0m0s">
         <button type="submit" class="btn btn-primary">Find Track</button>
     </form>
-    <small>Work in progress, no guarantee. <br>
-        Long sets can take a moment... <br>
+    <small>Long sets can take a moment... Experimental, no guarantee.
         Track recognition service: acrcloud.com
     </small>
 
@@ -52,10 +55,17 @@
     };
 </script>
 <script>
-    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-                (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-            m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+    (function (i, s, o, g, r, a, m) {
+        i['GoogleAnalyticsObject'] = r;
+        i[r] = i[r] || function () {
+                    (i[r].q = i[r].q || []).push(arguments)
+                }, i[r].l = 1 * new Date();
+        a = s.createElement(o),
+                m = s.getElementsByTagName(o)[0];
+        a.async = 1;
+        a.src = g;
+        m.parentNode.insertBefore(a, m)
+    })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
 
     ga('create', 'UA-54743751-3', 'auto');
     ga('send', 'pageview');

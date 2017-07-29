@@ -3,6 +3,8 @@ creds*
 .idea
 # Binaries for programs and plugins
 *.exe
+*.mp3
+cachdump.json
 *.dll
 *.so
 *.dylib

@@ -39,8 +39,6 @@ time in seconds
 ```
 
 ## TODO
-- implement web interface
 - avoid downloading whole file from soundcloud
-- implement caching with timestamp-range
 - automate deployment (terraform)
 - port webserver into python
