@@ -14,8 +14,15 @@ import (
 )
 
 var (
-	inProgressMessage = "<html><head><meta http-equiv=\"refresh\" content=\"2;\"></head><body>recognition in progress... you will be redirected automatically</body></html>"
-	resultPage = "<html><head></head><body>{{.ErrorMessage}}{{.Artist}} {{.TrackName}}</body></html>"
+	//TODO use file tempaltes
+	bootstrap = `<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+	<style> body {margin: 1em;}</style>`
+	inProgressMessage = "<html><head>" + bootstrap + "<meta http-equiv=\"refresh\" content=\"2;\"></head><body>recognition in progress... you will be redirected automatically</body></html>"
+	resultPage = `<html><head>` + bootstrap + `</head><body>
+			<h1>{{.ErrorMessage}}{{if .Artist}}{{.Artist}} - {{.TrackName}}{{end}}<h1>
+		        <button type="submit" class="btn btn-primary" onClick="window.history.go(-1); return false;">Search more</button>
+			</body></html>`
+
 	hourRegex = regexp.MustCompile("([0-9]+)h")
 	minuteRegex = regexp.MustCompile("([0-9]+)m")
 	secondRegex = regexp.MustCompile("([0-9]+)s")
