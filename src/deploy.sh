@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 
-IP=35.193.197.105
+source creds.sh
 
 #this is very big, don't deploy unnecessarily:
-#scp -r acrcloud_linux/* ${IP}:acrcloud
+#scp -r acrcloud_linux/* ${SN_IP}:acrcloud
 
-scp -r ./frontend/* ${IP}:frontend
-scp webserver.go ${IP}:
-scp run.sh ${IP}:
-scp soundcloud_dl.py ${IP}:
-scp creds.sh ${IP}:
-scp acr_recognise.py ${IP}:
+scp -r ./frontend/* ${SN_IP}:frontend
+scp webserver.go ${SN_IP}:
+scp run.sh ${SN_IP}:
+scp soundcloud_dl.py ${SN_IP}:
+scp creds.sh ${SN_IP}:
+scp acr_recognise.py ${SN_IP}:
 
-ssh ${IP} <<'ENDSSH'
+ssh ${SN_IP} <<'ENDSSH'
 source creds.sh
 export GOPATH=$(pwd)
 go build webserver.go
