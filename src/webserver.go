@@ -15,6 +15,7 @@ import (
 
 var (
 	inProgressMessage = "<html><head><meta http-equiv=\"refresh\" content=\"2;\"></head><body>recognition in progress... you will be redirected automatically</body></html>"
+	resultPage = "<html><head></head><body>{{.ErrorMessage}}{{.Artist}} {{.TrackName}}</body></html>"
 	hourRegex = regexp.MustCompile("([0-9]+)h")
 	minuteRegex = regexp.MustCompile("([0-9]+)m")
 	secondRegex = regexp.MustCompile("([0-9]+)s")
@@ -95,7 +96,7 @@ func Serve() {
 
 		t := template.New("some template") // Create a template.
 		//t2, err := t.ParseFiles("./frontend/result_page.html")  // Parse template file.
-		t2, err := t.Parse("{{.ErrorMessage}}{{.Artist}} {{.TrackName}}")  // Parse template file.
+		t2, err := t.Parse(resultPage)  // Parse template file.
 		if err != nil {
 			panic(err)
 		}
