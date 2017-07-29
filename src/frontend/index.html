@@ -3,16 +3,51 @@
 </head>
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
       integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<style>
+    .center {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width:30em;
+        margin-left: -15em; /*half width*/
+        margin-top: -200px; /*half height*/
+    }
+</style>
 <body>
-<div style="margin: 1em;">
+<div class="center">
     <form method="GET" action="/api/recognise" class="form-group" style="width: 30em">
         <label for="url">SoundCloud URL</label>
-        <input type="text" class="form-control" id="url" name="url" placeholder="https://soundcloud.com/elbuhoofficial/tecolotin">
+        <input type="text" class="form-control" id="url" name="url"
+               placeholder="https://soundcloud.com/elbuhoofficial/tecolotin">
         <label for="t">Time</label>
-        <input type="text" style="width: 4em" class="form-control" id="t" name="t"  placeholder="0m0s">
-        Finding track can take a minute...<br>
+        <input type="text" style="width: 5em" class="form-control" id="t" name="t" value="0s" placeholder="0m0s">
+        <br>Finding track in long sets can take a while...<br>
         <button type="submit" class="btn btn-primary">Find Track</button>
     </form>
+    <small>Work in progress, no guarantee. User recognition service: acrcloud.com</small>
+
 </div>
+<script>
+    onload = function () {
+        var sc_url = document.getElementById('url');
+        var timestamp = document.getElementById('t');
+        sc_url.oninput = function () {
+            if (sc_url.value.indexOf("#t=") !== -1) {
+                var ts = sc_url.value.match(/([0-9]+:[0-9]+:[0-9]+)/);
+                if (!ts) {
+                    ts = sc_url.value.match(/([0-9]+:[0-9]+)/)
+                }
+                if (!ts) {
+                    ts = sc_url.value.match(/([0-9]+)/)
+                }
+                if (ts) {
+                    timestamp.value = ts[0]
+                }
+            }
+        };
+
+        sc_url.onpropertychange = sc_url.oninput; // for IE8
+    };
+</script>
 </body>
 </html>

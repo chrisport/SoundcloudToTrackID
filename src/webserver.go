@@ -5,27 +5,30 @@ import (
 	"log"
 	"os/exec"
 	"strings"
-	"sync"
 	"regexp"
 	"strconv"
 	"math"
 	"html/template"
 	simplejson "github.com/bitly/go-simplejson"
+	"github.com/chrisport/slotprovider"
+	"sync"
+	"fmt"
 )
 
 var (
-	//TODO use file tempaltes
+	//TODO use file templates
 	bootstrap = `<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 	<style> body {margin: 1em;}</style>`
 	inProgressMessage = "<html><head>" + bootstrap + "<meta http-equiv=\"refresh\" content=\"2;\"></head><body>recognition in progress... you will be redirected automatically</body></html>"
 	resultPage = `<html><head>` + bootstrap + `</head><body>
-			<h1>{{.ErrorMessage}}{{if .Artist}}{{.Artist}} - {{.TrackName}}{{end}}<h1>
+			{{.ErrorMessage}}<h1>{{if .Artist}}{{.Artist}} - {{.TrackName}}{{end}}<h1>
 		        <button type="submit" class="btn btn-primary" onClick="window.history.go(-1); return false;">Search more</button>
 			</body></html>`
 
 	hourRegex = regexp.MustCompile("([0-9]+)h")
 	minuteRegex = regexp.MustCompile("([0-9]+)m")
 	secondRegex = regexp.MustCompile("([0-9]+)s")
+	cleanUrlRegex = regexp.MustCompile("(.*)\\?")
 )
 
 func main() {
@@ -35,7 +38,7 @@ func main() {
 func extractTimeInSeconds(timestamp string) (int, error) {
 	if timestamp == "" {
 		return 0, nil
-	} else if strings.Contains(timestamp, "s") {
+	} else if strings.Contains(timestamp, "s") || strings.Contains(timestamp, "h") || strings.Contains(timestamp, "m") {
 		return extractFromHMSFormat(timestamp)
 	} else {
 		return extractFromCOLONFormat(timestamp)
@@ -93,6 +96,11 @@ func Serve() {
 	http.HandleFunc("/api/recognise", func(rw http.ResponseWriter, req *http.Request) {
 		q := req.URL.Query()
 		songUrl := q["url"][0]
+		songUrl = cleanUrl(songUrl)
+		fmt.Println(songUrl)
+		fmt.Println(songUrl)
+		fmt.Println(songUrl)
+		fmt.Println(songUrl)
 		ts := q["t"][0]
 		result := throttledRecogniser(songUrl, ts)
 
@@ -113,83 +121,93 @@ func Serve() {
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
 
-type Response struct {
+func cleanUrl(url string) string {
+	if strings.Contains(url, "?") {
+		url = cleanUrlRegex.FindStringSubmatch(url)[0]
+		url = url[:len(url)-1]
+	}
+	return url
+}
+
+type Result struct {
 	ErrorMessage string
 	Artist       string
 	TrackName    string
 	RawBody      string
 }
 
-func newThrottledRecogniser() func(songUrl string, ts string) *Response {
-	rateLimiter := sync.RWMutex{}
-	var lastRequestedUrl string
-	var lastResult = &Response{}
-	return func(songUrl, ts string) *Response {
+func newThrottledRecogniser() func(songUrl string, ts string) *Result {
+	recognitionSP := slotprovider.New(5)
+	return func(songUrl, ts string) *Result {
 		timeInSeconds, err := extractTimeInSeconds(ts)
 		if err != nil {
-			return &Response{ErrorMessage:err.Error()}
-
+			return &Result{ErrorMessage:err.Error()}
 		}
-		if lastRequestedUrl == songUrl + ts {
-			log.Println("User requested same url " + songUrl + ts)
-			if (lastResult != nil) {
-				return lastResult
-			} else {
-				return &Response{RawBody:inProgressMessage}
-			}
-		} else {
-			log.Println("User requested new URL, start recognition " + songUrl + ts)
-			if lastResult == nil {
-				return &Response{ErrorMessage:"Rate limit reached."}
-			} else {
-				rateLimiter.Lock()
-				go func() {
-					lastRequestedUrl = songUrl + ts
-					lastResult = nil
-					result := RecogniseSong(songUrl, timeInSeconds)
-					res := parseResult(result)
-					lastResult = res
-					rateLimiter.Unlock()
-				}()
-				return &Response{RawBody:inProgressMessage}
-			}
 
+		fullUrl := songUrl + strconv.Itoa(timeInSeconds)
+		initialized, res := getFromCache(fullUrl)
+		if res != nil {
+			log.Printf("Responding to %v with cached result", fullUrl)
+			return res
+		} else if initialized {
+			// this item is processing currently
+			log.Printf("Responding to %v with 'in progress'", fullUrl)
+			return &Result{RawBody:inProgressMessage}
 		}
+		//else start recognition
+
+		acquired, release := recognitionSP.AcquireSlot()
+		if !acquired {
+			log.Printf("Responding to %v with 'no free slots'", fullUrl)
+			return &Result{ErrorMessage:"Request limit reached. We are not able to recognize more songs at the moment. Please try later."}
+		}
+
+		go func() {
+			log.Printf("Start recognition of %v", fullUrl)
+			reserveCache(fullUrl)
+			result := RecogniseSong(songUrl, timeInSeconds)
+			res := parseResult(result)
+			release()
+			putResultToCache(fullUrl, res)
+		}()
+		log.Printf("Responding to %v with 'in progress' and start recognition", fullUrl)
+		return &Result{RawBody:inProgressMessage}
 	}
 
 }
 
-func parseResult(result string) *Response {
+func parseResult(result string) *Result {
 	sj, err := simplejson.NewJson([]byte(result))
 	if err != nil {
-		return &Response{ErrorMessage:"Error occurred"}
+		return &Result{ErrorMessage:"Error occurred"}
 	}
 
 	noResult, err := (*sj).GetPath("status", "msg").String()
 	if noResult == "No result" {
-		return &Response{ErrorMessage:"Track could not be recognised."}
+		return &Result{ErrorMessage:"Track could not be recognised."}
 	}
 
 	artist, err := (*sj).GetPath("metadata", "music").GetIndex(0).Get("artists").GetIndex(0).Get("name").String()
 	if err != nil {
-		return &Response{ErrorMessage:"Error occurred"}
+		return &Result{ErrorMessage:"Error occurred"}
 	}
 
 	trackName, err := (*sj).GetPath("metadata", "music").GetIndex(0).Get("title").String()
 	if err != nil {
-		return &Response{ErrorMessage:"Error occurred"}
+		return &Result{ErrorMessage:"Error occurred"}
 	} else {
 
-		return &Response{Artist:artist, TrackName:trackName}
+		return &Result{Artist:artist, TrackName:trackName}
 	}
 }
 
 func RecogniseSong(songUrl string, timeInSeconds int) string {
+	log.Println("./run.sh", songUrl, strconv.Itoa(timeInSeconds))
 	out, err := exec.Command("./run.sh", songUrl, strconv.Itoa(timeInSeconds)).Output()
 	if err != nil {
 		log.Printf("[ERROR] %v", err)
 	}
-	log.Println(songUrl, string(out))
+	log.Println(songUrl, "Result received for " + songUrl)
 	lines := strings.Split(string(out), "\n")
 	res := "unknown error occurred"
 	for i := len(lines) - 1; i >= 0; i-- {
@@ -199,4 +217,38 @@ func RecogniseSong(songUrl string, timeInSeconds int) string {
 		}
 	}
 	return res
+}
+
+var (
+	cache = make(map[string]*Result)
+	cacheMux = sync.Mutex{}
+	InitialResult = &Result{ErrorMessage:"Processing"}
+)
+
+func reserveCache(id string) {
+	cacheMux.Lock()
+	defer cacheMux.Unlock()
+	cache[id] = InitialResult
+}
+
+func putResultToCache(id string, result *Result) {
+	cacheMux.Lock()
+	defer cacheMux.Unlock()
+	if cache[id] == nil {
+		log.Printf("Warning: Result for %v has been stored in cache without prior reservation\n", id)
+	}
+	cache[id] = result
+}
+
+func getFromCache(id string) (initialized bool, result *Result) {
+	cacheMux.Lock()
+	defer cacheMux.Unlock()
+	existing := cache[id]
+	if existing == nil {
+		return false, nil
+	}
+	if existing == InitialResult {
+		return true, nil
+	}
+	return true, existing
 }

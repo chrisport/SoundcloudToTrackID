@@ -7,5 +7,5 @@ source creds.sh
 op=$(python3 soundcloud_dl.py $1)
 filename=${op##*$'\n'}
 echo $filename
-python3 test.py "$filename" $2
-rm "$filename"
+python3 acr_recognise.py "$filename" $2
+#rm "$filename"
