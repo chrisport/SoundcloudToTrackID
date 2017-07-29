@@ -8,7 +8,7 @@ from mutagen.id3 import APIC
 from mutagen.id3 import ID3 as OldID3
 from mutagen.mp3 import MP3, EasyMP3
 
-CLIENT_ID = "**"  # your client ID
+CLIENT_ID = os.environ['SC_CLIENT_ID']  # your client ID
 FOLDER_LOCATION = "."  # where you want the file saved to
 client = soundcloud.Client(client_id=CLIENT_ID)
 SONG_TO_DOWNLOAD = ""
