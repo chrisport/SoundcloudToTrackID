@@ -109,18 +109,18 @@ func newThrottledRecogniser() func(songUrl string, ts string) *Result {
 		}
 		//else start recognition
 
-		acquired, release := recognitionSP.AcquireSlot()
-		if !acquired {
+		isSlotAcquired, releaseSlot := recognitionSP.AcquireSlot()
+		if !isSlotAcquired {
 			log.Printf("Responding to %v with 'no free slots'", fullUrl)
 			return &Result{ErrorMessage:"Request limit reached. We are not able to recognize more songs at the moment. Please try later."}
 		}
+		reserveCache(fullUrl)
 
 		go func() {
+			defer releaseSlot()
 			log.Printf("Start recognition of %v", fullUrl)
-			reserveCache(fullUrl)
 			result := RecogniseSong(songUrl, timeInSeconds)
 			res := parseResult(result)
-			release()
 			putResultToCache(fullUrl, res)
 		}()
 		log.Printf("Responding to %v with 'in progress' and start recognition", fullUrl)
@@ -164,14 +164,54 @@ func parseResult(result string) *Result {
 	}
 }
 
-func RecogniseSong(songUrl string, timeInSeconds int) string {
-	log.Println("./run.sh", songUrl, strconv.Itoa(timeInSeconds))
-	out, err := exec.Command("./run.sh", songUrl, strconv.Itoa(timeInSeconds)).Output()
+func RecogniseSong(songUrl string, timeInSeconds int) (string) {
+	filePath, err := downloadSong(songUrl)
 	if err != nil {
-		log.Printf("[ERROR] %v", err)
+		return "Error while downloading: " + err.Error()
 	}
-	log.Println(songUrl, "Result received for " + songUrl)
-	lines := strings.Split(string(out), "\n")
+	result, err := sendSongToACR(filePath, timeInSeconds)
+	if err != nil {
+		return "Error while recognizing: " + err.Error()
+	}
+	return result
+}
+
+func downloadSong(songUrl string) (string, error) {
+	var fileName string
+	var err error
+	if strings.Contains(songUrl, "youtube") {
+		fileName, err = executeAndGetLastLine("./download_youtube.sh", songUrl)
+		if err != nil {
+			return "", err
+		}
+	} else if strings.Contains(songUrl, "soundcloud") {
+		fileName, err = executeAndGetLastLine("./download_soundcloud.sh", songUrl)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	log.Println("Downloaded song to file: ", fileName, songUrl)
+	return fileName, nil
+}
+
+func sendSongToACR(filePath string, timeInSeconds int) (string, error) {
+	return executeAndGetLastLine("./recognise.sh", filePath, strconv.Itoa(timeInSeconds))
+}
+
+func executeAndGetLastLine(script string, opts... string) (string, error) {
+	out, err := exec.Command(script, opts...).Output()
+	if err != nil {
+		log.Printf("[ERROR] Script %v failed with %v\n", script, err)
+		return "", err
+	}
+	log.Printf("[SUCCESS] Script %v finished\n", script)
+	return getLastLine(string(out)), nil
+}
+
+// ### HELPER ####
+func getLastLine(input string) string {
+	lines := strings.Split(string(input), "\n")
 	res := "unknown error occurred"
 	for i := len(lines) - 1; i >= 0; i-- {
 		if lines[i] != "" {
@@ -182,7 +222,6 @@ func RecogniseSong(songUrl string, timeInSeconds int) string {
 	return res
 }
 
-// ### HELPER ####
 func extractTimeInSeconds(timestamp string) (int, error) {
 	if timestamp == "" {
 		return 0, nil
@@ -238,7 +277,7 @@ func extractFromHMSFormat(timestamp string) (int, error) {
 }
 
 func cleanUrl(url string) string {
-	if strings.Contains(url, "?") {
+	if strings.Contains(url, "soundcloud") && strings.Contains(url, "?") {
 		url = cleanUrlRegex.FindStringSubmatch(url)[0]
 		url = url[:len(url) - 1]
 	}

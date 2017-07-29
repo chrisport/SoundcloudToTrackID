@@ -16,19 +16,21 @@
 <body>
 <div class="center">
     <h2>SoundSniffer</h2>
-    Shazam for SoundCloud.
+    <b>Shazam for SoundCloud and YouTube.</b><br>
+    Just put the link and time and it tells you the name of the song.
     <form style="margin-top: 2em;margin-bottom: 2em;" method="GET" action="/api/recognise" class="form-group"
           style="width: 30em">
-        <label for="url">SoundCloud URL</label>
+        <label for="url">YouTube/SoundCloud URL</label>
         <input type="text" style="margin-bottom:10px;"class="form-control" id="url" name="url"
-               placeholder="https://soundcloud.com/elbuhoofficial/tecolotin#t=0:15">
+               placeholder="https://www.youtube.com/watch?v=Ho2e0zvGEWE">
         <label for="t">Time</label>
         <input type="text" style="width: 5em;margin-bottom:10px;" class="form-control" id="t" name="t" value="0s"
                placeholder="0m0s">
         <button type="submit" class="btn btn-primary">Find Track</button>
     </form>
-    <small>Long sets can take a moment... Experimental, no guarantee.
-        Track recognition service: acrcloud.com
+    <small>
+        Youtube links and long soundcloud tracks can take 1-2 minutes... consequent request on same song are fast.
+        Experimental, no guarantee. Track recognition service: acrcloud.com
     </small>
 
 </div>

@@ -5,12 +5,12 @@ The goal of this project is particularly to extrakt track ids out of DJ sets on 
 Link + timestamp --> track id
 
 For example:   
-https://soundcloud.com/spak/melodias-de-los-bosques#t=25:51 --> Lemurian - 222
-
-https://soundcloud.com/cosmotechmusic/cosmopods12-by-jati-div#t=38:00          -->?¿?
-https://soundcloud.com/festivalnomade/peter-power-post-colonial-cafe#t=1:10:10 -->?¿?
-https://soundcloud.com/pacayapacaya/lazy-acid#t=58:30                          -->?¿?
-
+https://soundcloud.com/spak/melodias-de-los-bosques#t=25:51    
+    --> Lemurian - 222   
+or:   
+https://www.youtube.com/watch?v=YDWEz1mia1I and t=9m   
+    --> Matt Elliott - C.f. bundy   
+ 
 ## Usage
 workingdir is src folder   
 
@@ -41,4 +41,3 @@ time in seconds
 ## TODO
 - avoid downloading whole file from soundcloud
 - automate deployment (terraform)
-- port webserver into python

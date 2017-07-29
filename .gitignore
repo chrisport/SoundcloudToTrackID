@@ -4,7 +4,7 @@ creds*
 # Binaries for programs and plugins
 *.exe
 *.mp3
-cachdump.json
+cachedump.json
 *.dll
 *.so
 *.dylib
