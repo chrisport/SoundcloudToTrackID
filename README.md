@@ -1,4 +1,4 @@
-Unfortunately soundsniffer.chrisport.ch is currently offline, due to expiration of Google Cloud Platform trial. Redeployment might be considered in the future.
+Unfortunately soundsniffer.chrisport.ch is **currently offline**, due to expiration of Google Cloud Platform trial. Redeployment might be considered in the future.
 
 # SoundcloudToTrackID
 Find TrackID of a track on soundcloud
