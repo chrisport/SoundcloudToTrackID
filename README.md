@@ -1,9 +1,11 @@
 Unfortunately soundsniffer.chrisport.ch is **currently offline**, due to expiration of Google Cloud Platform trial. Redeployment might be considered in the future.
 
-# SoundcloudToTrackID
-Find TrackID of a track on soundcloud
+![Screenshot of Soundsniffer](https://user-images.githubusercontent.com/6203829/36000066-11910d50-0d22-11e8-99dc-3a7b35d7f7c4.png)
 
-The goal of this project is particularly to extrakt track ids out of DJ sets on soundcloud.   
+# Soundsniffer
+Recognize tracks within a DJ set from Soundcloud and Youtube.
+
+The goal of this project is particularly to extract track ids out of DJ sets on soundcloud.   
 Link + timestamp --> track id
 
 For example:   
@@ -17,7 +19,7 @@ https://www.youtube.com/watch?v=YDWEz1mia1I and t=9m
 workingdir is src folder   
 
 ### Webserver
-running the webserver
+running the webserver 
 ```
     go run webserver.go
 ```
